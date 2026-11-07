@@ -1,0 +1,867 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>micro:bit AI ラボ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+/* デザイントークン：SmartHR DESIGN.md（awesome-design-md-jp）を参照 */
+:root {
+  --bg: #f8f7f6;
+  --surface: #ffffff;
+  --surface-2: #f2f1f0;
+  --head: #edebe8;
+  --border: #d6d3d0;
+  --text: #23221e;
+  --text-sub: #706d65;
+  --primary: #0077c7;
+  --primary-soft: #e6f1fa;
+  --accent: #ff9900;
+  --accent-soft: #fff4e0;
+  --success: #2f9e5b;
+  --success-soft: #e8f6ee;
+  --radius: 8px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #1c1b19; --surface: #262522; --surface-2: #2f2e2a; --head: #34322e;
+    --border: #4e4c49; --text: #f2f1f0; --text-sub: #aaa69f;
+    --primary: #4ba3e3; --primary-soft: #1f3445; --accent: #ffb347; --accent-soft: #3d3020;
+    --success: #5cc488; --success-soft: #1f3a2a;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #1c1b19; --surface: #262522; --surface-2: #2f2e2a; --head: #34322e;
+  --border: #4e4c49; --text: #f2f1f0; --text-sub: #aaa69f;
+  --primary: #4ba3e3; --primary-soft: #1f3445; --accent: #ffb347; --accent-soft: #3d3020;
+  --success: #5cc488; --success-soft: #1f3a2a;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--bg); color: var(--text);
+  font-family: "Noto Sans JP", sans-serif;
+  font-size: 16px; line-height: 1.75; overflow-wrap: break-word;
+}
+a { color: var(--primary); }
+code { font-family: ui-monospace, "SF Mono", Menlo, monospace; background: var(--surface-2); padding: 1px 6px; border-radius: 4px; font-size: .9em; }
+
+/* ヘッダー */
+header.top { position: sticky; top: 0; z-index: 20; background: var(--surface); border-bottom: 1px solid var(--border); }
+.top-inner { max-width: 1120px; margin: 0 auto; padding: 10px 16px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.brand { font-weight: 900; font-size: 18px; letter-spacing: .02em; display: flex; align-items: center; gap: 8px; }
+.brand-mark { width: 14px; height: 28px; background: var(--text); border-radius: 14px 0 0 14px; }
+.brand small { font-weight: 500; font-size: 12px; color: var(--text-sub); }
+.progress-wrap { flex: 1; min-width: 180px; display: flex; align-items: center; gap: 10px; }
+.progress { flex: 1; height: 8px; background: var(--head); border-radius: 99px; overflow: hidden; }
+.progress > div { height: 100%; width: 0; background: var(--success); transition: width .3s; }
+.progress-label { font-size: 13px; color: var(--text-sub); white-space: nowrap; }
+.pace { font-size: 13px; padding: 4px 10px; border-radius: 99px; background: var(--accent-soft); white-space: nowrap; display: none; }
+.pace.show { display: inline-block; }
+
+/* レイアウト */
+.layout { max-width: 1120px; margin: 0 auto; padding: 24px 16px 80px; display: grid; grid-template-columns: 260px minmax(0, 1fr); gap: 28px; }
+@media (max-width: 860px) { .layout { grid-template-columns: minmax(0, 1fr); } nav.steps { position: static !important; } }
+
+nav.steps { position: sticky; top: 76px; align-self: start; }
+.part-label { font-size: 12px; font-weight: 700; color: var(--text-sub); letter-spacing: .1em; margin: 16px 0 6px; }
+.part-label:first-child { margin-top: 0; }
+.step-link { display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 10px; border: 0; border-radius: var(--radius); background: transparent; color: var(--text); font: inherit; font-size: 14px; text-align: left; cursor: pointer; line-height: 1.4; }
+.step-link:hover { background: var(--surface-2); }
+.step-link.active { background: var(--surface); box-shadow: inset 0 0 0 2px var(--text); font-weight: 700; }
+.dot { width: 22px; height: 22px; flex-shrink: 0; border-radius: 50%; border: 2px solid var(--border); display: grid; place-items: center; font-size: 11px; font-weight: 700; color: var(--text-sub); }
+.step-link.done .dot { background: var(--success); border-color: var(--success); color: #fff; }
+.step-link .time { margin-left: auto; font-size: 11px; color: var(--text-sub); }
+
+/* ステップ本文 */
+main section.step { display: none; }
+main section.step.show { display: block; animation: fadein .25s ease-out; }
+@keyframes fadein { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+.eyebrow { font-size: 12px; font-weight: 700; letter-spacing: .1em; color: var(--text-sub); }
+h1 { font-size: 28px; line-height: 1.3; margin: 4px 0 12px; display: flex; align-items: center; gap: 12px; }
+h1::before { content: ""; width: 14px; height: 32px; background: var(--text); border-radius: 16px 0 0 16px; flex-shrink: 0; }
+h2 { font-size: 19px; line-height: 1.4; margin: 28px 0 10px; }
+h3 { font-size: 16px; margin: 18px 0 6px; }
+p { margin: 8px 0; }
+
+.goal { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; margin: 12px 0 20px; }
+.goal b { display: block; font-size: 12px; letter-spacing: .1em; color: var(--text-sub); margin-bottom: 2px; }
+.hint { border-left: 4px solid var(--primary); background: var(--primary-soft); padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; margin: 12px 0; }
+.think { border-left: 4px solid var(--accent); background: var(--accent-soft); padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; margin: 12px 0; }
+.challenge { border: 2px dashed var(--border); border-radius: var(--radius); padding: 14px 16px; margin: 20px 0; }
+.challenge > b { color: var(--accent); }
+ul.tight { margin: 6px 0 0; padding-left: 20px; }
+
+/* コラム */
+.column { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px 20px; margin: 28px 0; }
+.column .tag { display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: .1em; border: 1px solid var(--text); border-radius: 4px; padding: 1px 8px; margin-bottom: 6px; }
+.column h3 { margin: 4px 0 8px; font-size: 18px; }
+.column .people { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
+@media (max-width: 600px) { .column .people { grid-template-columns: 1fr; } }
+.column .person { background: var(--surface-2); border-radius: var(--radius); padding: 12px 14px; font-size: 14px; }
+.column .person b { display: block; font-size: 15px; }
+
+/* 手順リスト（チェックできる） */
+ol.todo { list-style: none; padding: 0; margin: 8px 0; counter-reset: todo; }
+ol.todo > li { counter-increment: todo; position: relative; padding: 10px 12px 10px 48px; border-radius: var(--radius); background: var(--surface); border: 1px solid var(--border); margin-bottom: 8px; cursor: pointer; user-select: none; }
+ol.todo > li::before { content: counter(todo); position: absolute; left: 12px; top: 10px; width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--border); display: grid; place-items: center; font-size: 12px; font-weight: 700; color: var(--text-sub); background: var(--surface); }
+ol.todo > li.checked { background: var(--success-soft); border-color: var(--success); }
+ol.todo > li.checked::before { content: "✓"; background: var(--success); border-color: var(--success); color: #fff; }
+ol.todo > li .sub { display: block; font-size: 14px; color: var(--text-sub); margin-top: 2px; }
+
+/* 画像 */
+figure { margin: 12px 0 18px; }
+figure img { display: block; max-width: 100%; height: auto; border: 1px solid var(--border); border-radius: var(--radius); background: #fff; }
+figure.blocks img { border: 0; border-radius: 6px; max-height: 260px; width: auto; }
+figure.blocks { background: #ecf0f1; border-radius: var(--radius); padding: 12px; display: inline-block; max-width: 100%; }
+figcaption { font-size: 13px; color: var(--text-sub); margin-top: 6px; }
+.shots { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 700px) { .shots { grid-template-columns: 1fr; } }
+.shots figure { margin: 0; }
+img.zoom { cursor: zoom-in; }
+.lightbox { position: fixed; inset: 0; background: rgba(0,0,0,.8); display: none; align-items: center; justify-content: center; z-index: 50; padding: 16px; cursor: zoom-out; }
+.lightbox.show { display: flex; }
+.lightbox img { max-width: 100%; max-height: 100%; border-radius: var(--radius); }
+
+/* コード */
+details.code { margin: 8px 0 16px; }
+details.code summary { cursor: pointer; font-size: 14px; color: var(--primary); font-weight: 700; }
+.code-box { position: relative; background: #23221e; color: #e8f6ee; border-radius: var(--radius); padding: 14px 16px; margin-top: 8px; font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 13px; line-height: 1.7; white-space: pre; overflow-x: auto; }
+.copy-btn { position: absolute; top: 8px; right: 8px; font: inherit; font-family: "Noto Sans JP", sans-serif; font-size: 12px; padding: 4px 10px; border-radius: 4px; border: 1px solid #706d65; background: #4e4c49; color: #fff; cursor: pointer; }
+
+/* つまずいたら */
+details.trouble { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); margin: 8px 0; }
+details.trouble summary { cursor: pointer; padding: 10px 14px; font-weight: 700; font-size: 14px; }
+details.trouble > div { padding: 0 14px 12px; font-size: 14px; }
+
+/* 図 */
+.flow { display: flex; align-items: stretch; gap: 8px; flex-wrap: wrap; margin: 12px 0; }
+.flow > div { flex: 1; min-width: 120px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px; text-align: center; font-size: 14px; }
+.flow > div b { display: block; font-size: 16px; }
+.flow > span { align-self: center; color: var(--text-sub); font-weight: 700; }
+.compare { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 12px 0; }
+@media (max-width: 600px) { .compare { grid-template-columns: 1fr; } }
+.compare > div { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; font-size: 15px; }
+.compare h3 { margin-top: 0; }
+
+/* 入力欄 */
+label.field { display: block; margin: 14px 0; font-weight: 700; font-size: 15px; }
+label.field span { display: block; font-weight: 400; font-size: 13px; color: var(--text-sub); }
+textarea, input[type=text] { width: 100%; margin-top: 6px; font: inherit; font-size: 15px; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); color: var(--text); }
+textarea { min-height: 72px; resize: vertical; }
+textarea:focus, input:focus { outline: 2px solid var(--primary); outline-offset: 1px; }
+
+/* ボタン */
+.btn { font: inherit; font-size: 15px; font-weight: 700; padding: 10px 18px; border-radius: var(--radius); border: 1px solid var(--border); background: var(--surface); color: var(--text); cursor: pointer; }
+.btn:hover { background: var(--surface-2); }
+.btn.primary { background: var(--primary); border-color: var(--primary); color: #fff; }
+.btn.done { background: var(--success); border-color: var(--success); color: #fff; }
+.step-foot { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 32px; padding-top: 20px; border-top: 1px solid var(--border); }
+.ext { display: inline-flex; align-items: center; gap: 6px; text-decoration: none; font-weight: 700; padding: 10px 16px; border-radius: var(--radius); background: var(--text); color: var(--surface); margin: 4px 8px 4px 0; }
+.ext.submit { background: var(--primary); color: #fff; font-size: 17px; padding: 14px 22px; }
+.toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--text); color: var(--surface); padding: 8px 16px; border-radius: 99px; font-size: 14px; opacity: 0; transition: opacity .2s; pointer-events: none; }
+.toast.show { opacity: 1; }
+table.mini { border-collapse: collapse; width: 100%; font-size: 14px; margin: 10px 0; background: var(--surface); }
+table.mini th, table.mini td { border: 1px solid var(--border); padding: 8px 10px; text-align: left; }
+table.mini th { background: var(--head); }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="top-inner">
+    <div class="brand"><span class="brand-mark"></span>micro:bit AI ラボ <small>情報工学基礎 11/9</small></div>
+    <div class="progress-wrap">
+      <div class="progress"><div id="bar"></div></div>
+      <span class="progress-label" id="barLabel">0 / 11</span>
+    </div>
+    <span class="pace" id="pace"></span>
+  </div>
+</header>
+
+<div class="layout">
+  <nav class="steps" id="nav" aria-label="ステップ一覧"></nav>
+
+  <main id="main">
+
+<!-- STEP 0 -->
+<section class="step" data-title="じゅんび" data-part="1限：初めまして micro:bit" data-start="9:15" data-end="9:25">
+  <div class="eyebrow">STEP 0 ・ 9:15〜9:25</div>
+  <h1>じゅんび</h1>
+  <div class="goal"><b>ゴール</b>MakeCode を開いて、新しいプロジェクトを作る</div>
+
+  <p>今日は <b>micro:bit</b>（マイクロビット）という小さなコンピュータで、最後には<b>「動きを見分ける AI」</b>を自分で作ります。自分のペースで STEP を進めてください。終わった手順はクリックするとチェックが付きます。</p>
+
+  <h2>手順</h2>
+  <ol class="todo">
+    <li>USB ケーブルで micro:bit とパソコンをつなぐ<span class="sub">micro:bit の裏の黄色い LED が光れば OK</span></li>
+    <li>MakeCode を開く<span class="sub">ブラウザは好きなもので OK。ただし <b>Safari・Firefox</b> は micro:bit に直接つなげず、後半の CreateAI も使えません（理由は STEP 6）</span></li>
+    <li>「新しいプロジェクト」を押し、名前を付けて「作成」<span class="sub">例：<code>hello</code>。本名は入れないでおこう</span></li>
+    <li>「ようこそ！」の案内が出たら × で閉じる（読んでも OK）</li>
+  </ol>
+  <a class="ext" href="https://makecode.microbit.org/" target="_blank" rel="noopener">MakeCode を開く ↗</a>
+
+  <figure><img class="zoom" src="img/mc-home.png" alt="MakeCode のホーム画面。紫の「新しいプロジェクト」ボタンがある"><figcaption>MakeCode のホーム画面。紫の「新しいプロジェクト」から始めます</figcaption></figure>
+
+  <h2>MakeCode の画面</h2>
+  <figure><img class="zoom" src="img/mc-editor.png" alt="MakeCode の編集画面"><figcaption>左：シミュレーター ／ 真ん中：ブロックの棚 ／ 右：作業エリア ／ 左下：ダウンロード</figcaption></figure>
+  <table class="mini">
+    <tr><th>場所</th><th>何をするところ？</th></tr>
+    <tr><td>左：シミュレーター</td><td>画面の中の micro:bit。プログラムがすぐ動く</td></tr>
+    <tr><td>真ん中：ブロックの棚</td><td>「基本」「入力」「LED」など、色ごとにブロックが入っている</td></tr>
+    <tr><td>右：作業エリア</td><td>ブロックを並べてプログラムを作る。最初から「最初だけ」「ずっと」がある</td></tr>
+    <tr><td>左下：ダウンロード</td><td>作ったプログラムを本物の micro:bit に書き込む</td></tr>
+  </table>
+
+  <details class="trouble"><summary>つまずいたら：USB をつないでも何も光らない</summary>
+    <div>ケーブルが「充電専用」の可能性があります。別のケーブルに替えてみてください。それでもダメならスタッフを呼んでください。</div>
+  </details>
+</section>
+
+<!-- STEP 1 -->
+<section class="step" data-title="LED で自己紹介" data-part="1限：初めまして micro:bit" data-start="9:25" data-end="9:45">
+  <div class="eyebrow">STEP 1 ・ 9:25〜9:45</div>
+  <h1>LED で自己紹介</h1>
+  <div class="goal"><b>ゴール</b>自分の名前とアイコンを LED に表示して、本物の micro:bit に書き込む</div>
+
+  <h2>作るプログラム</h2>
+  <figure class="blocks"><img src="img/blk-step1.png" alt="最初だけ の中に 文字列を表示 Hello! Shu と アイコンを表示 ハート"></figure>
+
+  <h2>手順</h2>
+  <ol class="todo">
+    <li>「基本」から <b>文字列を表示</b> を「最初だけ」の中に入れる</li>
+    <li>"Hello!" の後ろに自分の名前（ローマ字）を書く<span class="sub">LED は日本語を表示できません</span></li>
+    <li>「基本」から <b>アイコンを表示</b> を下につなげ、好きなアイコンを選ぶ</li>
+    <li>左のシミュレーターで動きを確認する</li>
+    <li>ダウンロードの横の <b>「…」→「デバイスを接続する」</b>で micro:bit とつなぐ<span class="sub">一度つなげば、次からは「ダウンロード」だけで書き込めます</span></li>
+    <li>「ダウンロード」を押して、本物の micro:bit に名前が流れたら成功！</li>
+  </ol>
+  <figure><img class="zoom" src="img/mc-menu.png" alt="ダウンロードの横の … を押すと デバイスを接続する が出る"><figcaption>「…」を押すと「デバイスを接続する」「ファイルとしてダウンロードする」が出ます</figcaption></figure>
+
+  <details class="code"><summary>うまく組めない人へ：Python でコピーする</summary>
+    <p style="font-size:14px">画面上の「JavaScript ▾」の ▾ から <b>Python</b> を選び、中身を全部消して貼り付け → 「ブロック」に戻ると、ブロックに変わります。</p>
+    <figure><img class="zoom" src="img/mc-python.png" alt="ブロック／Python の切り替え"><figcaption>上の切り替えで「ブロック」と「Python」を行き来できます</figcaption></figure>
+    <div class="code-box"><button class="copy-btn">コピー</button>basic.show_string("Hello! Shu")
+basic.show_icon(IconNames.HEART)</div>
+  </details>
+
+  <details class="trouble"><summary>つまずいたら：「デバイスを接続する」が失敗する</summary>
+    <div>Safari などでは直接つなげないことがあります。その場合は「…」→「ファイルとしてダウンロードする」でできた <code>.hex</code> ファイルを、Finder で <b>MICROBIT</b> というドライブにドラッグすれば書き込めます。</div>
+  </details>
+
+  <div class="challenge"><b>チャレンジ：オリジナル名札</b>
+    <p>次の条件を<b>全部</b>満たすプログラムを作ろう。</p>
+    <ol>
+      <li>電源を入れると、名前が 1 回だけ流れる</li>
+      <li>名前のあと、<b>自分で描いた 5×5 のドット絵</b>が表示される（「基本」の棚の、マス目をクリックして描けるブロックを使う）</li>
+      <li>ボタン A を押すと、もう一度名前が流れる</li>
+      <li>ボタン B を押すと、ドット絵に戻る</li>
+    </ol>
+    <p style="font-size:14px;color:var(--text-sub)">確認：シミュレーターで A・B を交互に押して、どちらも思い通りに動けばクリア。</p>
+  </div>
+</section>
+
+<!-- STEP 2 -->
+<section class="step" data-title="センサーで反応させる" data-part="1限：初めまして micro:bit" data-start="9:45" data-end="10:10">
+  <div class="eyebrow">STEP 2 ・ 9:45〜10:10</div>
+  <h1>センサーで反応させる</h1>
+  <div class="goal"><b>ゴール</b>ボタン・ゆさぶり・明るさに反応するプログラムを作る</div>
+
+  <p>micro:bit には、ボタン・加速度センサー（動き）・明るさセンサー・温度センサーなどが入っています。「○○したら、△△する」をつくってみよう。</p>
+
+  <h2>2-1 振ったらサイコロ</h2>
+  <figure class="blocks"><img src="img/blk-step2a.png" alt="ゆさぶられたとき 数を表示 1から6までの乱数"></figure>
+  <ol class="todo">
+    <li>「入力」から <b>ゆさぶられたとき</b> を出す</li>
+    <li>「基本」の <b>数を表示</b> を中に入れる</li>
+    <li>「計算」の <b>0 から 10 までの乱数</b> を数の所にはめて、1〜6 に変える</li>
+    <li>シミュレーターの「SHAKE」で試して、本物に書き込んで振ってみる</li>
+  </ol>
+  <details class="code"><summary>Python でコピーする</summary>
+    <div class="code-box"><button class="copy-btn">コピー</button>def on_gesture_shake():
+    basic.show_number(randint(1, 6))
+input.on_gesture(Gesture.SHAKE, on_gesture_shake)</div>
+  </details>
+
+  <h2>2-2 ボタンで切りかえ</h2>
+  <figure class="blocks"><img src="img/blk-step2b.png" alt="ボタンAが押されたとき 笑顔、ボタンBが押されたとき 悲しい顔"></figure>
+  <ol class="todo">
+    <li>「入力」の <b>ボタン A が押されたとき</b> → 笑顔のアイコン</li>
+    <li>もう 1 つ出して <b>B</b> に変える → 悲しい顔のアイコン</li>
+  </ol>
+  <details class="code"><summary>Python でコピーする</summary>
+    <div class="code-box"><button class="copy-btn">コピー</button>def on_button_pressed_a():
+    basic.show_icon(IconNames.HAPPY)
+input.on_button_pressed(Button.A, on_button_pressed_a)
+
+def on_button_pressed_b():
+    basic.show_icon(IconNames.SAD)
+input.on_button_pressed(Button.B, on_button_pressed_b)</div>
+  </details>
+
+  <h2>2-3 暗くなったら光る</h2>
+  <figure class="blocks"><img src="img/blk-step2c.png" alt="ずっと もし 明るさ < 50 なら アイコンを表示 でなければ 表示を消す"></figure>
+  <ol class="todo">
+    <li>「基本」の <b>ずっと</b> の中に、「論理」の <b>もし〜なら〜でなければ</b> を入れる</li>
+    <li>条件を「入力」の <b>明るさ</b> <code>&lt; 50</code> にする（「論理」の比較ブロックを使う）</li>
+    <li>暗いときはアイコン、明るいときは「表示を消す」にする</li>
+    <li>本物で micro:bit の LED 面を手でかくして試す</li>
+  </ol>
+  <details class="code"><summary>Python でコピーする</summary>
+    <div class="code-box"><button class="copy-btn">コピー</button>def on_forever():
+    if input.light_level() &lt; 50:
+        basic.show_icon(IconNames.DIAMOND)
+    else:
+        basic.clear_screen()
+basic.forever(on_forever)</div>
+  </details>
+
+  <div class="challenge"><b>チャレンジ①：音の出るサイコロ</b>
+    <p>2-1 のサイコロを改造して、次の条件を<b>全部</b>満たそう（micro:bit V2 はスピーカー内蔵）。</p>
+    <ol>
+      <li>出た目を「変数」の棚で作った変数 <code>目</code> に入れてから表示する</li>
+      <li>振ると、数字が出る前に短い音が 1 回鳴る（「音楽」の棚）</li>
+      <li><b>6 が出たときだけ</b>、特別なメロディが鳴る（「論理」の <b>もし</b> と <code>目 = 6</code> を使う）</li>
+      <li>1〜5 のときはメロディが鳴らない</li>
+    </ol>
+    <p style="font-size:14px;color:var(--text-sub)">確認：何回か振って、6 のときだけメロディが鳴ればクリア。</p>
+  </div>
+  <div class="challenge"><b>チャレンジ②：3 段階ライト</b>
+    <p>2-3 を改造して、明るさで 3 段階に変わるライトを作ろう。</p>
+    <ol>
+      <li>まず、ボタン A を押すと<b>今の明るさの数字</b>が表示されるようにする</li>
+      <li>教室の明るさ・手でかくした明るさを測って、2 つの<b>しきい値</b>（境目の数字）を自分で決める</li>
+      <li>暗い → 全部点灯 ／ 少し暗い → ハート ／ 明るい → 消える、の 3 段階にする（「もし〜なら〜でなければもし」を使う）</li>
+    </ol>
+    <p style="font-size:14px;color:var(--text-sub)">確認：手のかくし方を変えて、3 段階が切りかわればクリア。決めたしきい値と理由をメモしておこう。</p>
+  </div>
+
+  <div class="think"><b>考えよう</b>　ここまでは「ボタン A が押されたら笑顔」「明るさが 50 より小さければ光る」のように、<b>条件（ルール）を人間が決めて</b>書きました。では、「歩いている」「走っている」の違いも、同じようにルールで書けるでしょうか？ STEP 3・4 で挑戦します。</div>
+</section>
+
+<!-- STEP 3 -->
+<section class="step" data-title="動きはデータ" data-part="1限：初めまして micro:bit" data-start="10:10" data-end="10:20">
+  <div class="eyebrow">STEP 3 ・ 10:10〜10:20</div>
+  <h1>動きはデータ</h1>
+  <div class="goal"><b>ゴール</b>加速度センサーの値をグラフで見て、「動き」が数字の並びだと知る</div>
+
+  <figure class="blocks"><img src="img/blk-step3.png" alt="ずっと シリアル通信 名前と数値を書き出す x = 加速度 x（y・z も同様）"><figcaption>「シリアル通信」は棚の下の「高度なブロック」の中にあります</figcaption></figure>
+
+  <h2>3-1 加速度の数字の意味</h2>
+  <div class="compare">
+    <div>
+      <h3>単位は「ミリG」</h3>
+      <p><b>1G ＝ 地球の重力 1 つ分</b>。その 1000 分の 1 が 1 ミリG です。micro:bit では <b>約 1023 ≒ 1G</b>。</p>
+      <p>止まっていても重力がかかっているので、<b>下を向いた方向に約 1023</b> が出ます。かたむけると、その 1023 が x・y・z に分かれます。そのため、かたむけるだけなら値は <b>−1023〜1023</b> の間になります。</p>
+      <p style="font-size:14px;color:var(--text-sub)">強く振ると重力以外の力も加わるので、1023 をこえる値も出ます。</p>
+    </div>
+    <div>
+      <h3>x・y・z は向き</h3>
+      <svg viewBox="0 0 260 200" width="100%" style="max-width:300px;display:block;margin:0 auto" role="img" aria-label="micro:bit の x・y・z 軸の図">
+        <rect x="70" y="40" width="120" height="100" rx="10" fill="none" stroke="currentColor" stroke-width="2"/>
+        <rect x="112" y="50" width="36" height="14" rx="7" fill="none" stroke="currentColor" stroke-width="2"/>
+        <text x="130" y="158" text-anchor="middle" font-size="11" fill="currentColor">端子側</text>
+        <text x="130" y="34" text-anchor="middle" font-size="11" fill="currentColor">ロゴ側</text>
+        <line x1="20" y1="90" x2="240" y2="90" stroke="#0077c7" stroke-width="3"/>
+        <text x="240" y="82" text-anchor="end" font-size="13" font-weight="700" fill="#0077c7">x：左右</text>
+        <line x1="130" y1="10" x2="130" y2="185" stroke="#e01e5a" stroke-width="3"/>
+        <text x="136" y="190" font-size="13" font-weight="700" fill="#e01e5a">y：前後</text>
+        <circle cx="130" cy="90" r="8" fill="none" stroke="#2f9e5b" stroke-width="3"/>
+        <circle cx="130" cy="90" r="2.5" fill="#2f9e5b"/>
+        <text x="146" y="118" font-size="13" font-weight="700" fill="#2f9e5b">z：表と裏</text>
+      </svg>
+      <ul class="tight" style="font-size:15px">
+        <li><b>x</b>：左右（A ボタン ↔ B ボタン）</li>
+        <li><b>y</b>：前後（ロゴ側 ↔ 端子側）</li>
+        <li><b>z</b>：上下（画面の表 ↔ 裏）</li>
+      </ul>
+    </div>
+  </div>
+  <table class="mini">
+    <tr><th>置き方</th><th>x</th><th>y</th><th>z</th></tr>
+    <tr><td>画面を上にして机に平らに置く</td><td>約 0</td><td>約 0</td><td>約 −1023</td></tr>
+    <tr><td>A ボタン側・B ボタン側にかたむける</td><td>−1023〜1023 に変わる</td><td>約 0</td><td>0 に近づく</td></tr>
+    <tr><td>ロゴ側・端子側にかたむける</td><td>約 0</td><td>−1023〜1023 に変わる</td><td>0 に近づく</td></tr>
+  </table>
+  <p style="font-size:14px;color:var(--text-sub)">平らに置いたときの値は MakeCode 公式の説明より。かたむけたときの＋とーの向きは、グラフで自分で確かめよう。</p>
+
+  <h2>3-2 グラフで見る</h2>
+  <ol class="todo">
+    <li>上のプログラムを作る（Python のコピーでも OK）</li>
+    <li>本物の micro:bit に書き込む</li>
+    <li>平らに置く → 左右にかたむける → 前後にかたむける をして、上の表と同じになるか確かめる</li>
+    <li>シミュレーターの下に出る <b>「データを表示 デバイス」</b> を押す<span class="sub">x・y・z の 3 本のグラフが動き出します（「シミュレーター」の方は画面の中の micro:bit のデータ）</span></li>
+    <li>micro:bit を持って <b>ゆっくり歩く</b>・<b>小走り</b>・<b>止まる</b> をしてみて、グラフの違いを見る</li>
+  </ol>
+  <figure><img class="zoom" src="img/mc-step3-full.png" alt="シミュレーターの下に データを表示 ボタンが出ている"><figcaption>プログラムを作ると、シミュレーターの下に「データを表示」ボタンが出ます</figcaption></figure>
+  <details class="code"><summary>Python でコピーする</summary>
+    <div class="code-box"><button class="copy-btn">コピー</button>def on_forever():
+    serial.write_value("x", input.acceleration(Dimension.X))
+    serial.write_value("y", input.acceleration(Dimension.Y))
+    serial.write_value("z", input.acceleration(Dimension.Z))
+basic.forever(on_forever)</div>
+  </details>
+
+  <div class="think"><b>考えよう</b>　「歩く」と「走る」で、グラフのどこが違った？ 波の高さ？ 細かさ？ 気づいたことをメモしておこう。</div>
+  <label class="field">考えよう：考えたこと・気づいたこと<span>上の問いについて、自分の考えを書こう。この内容は提出します</span><textarea data-save="memo3" placeholder="例：走ると x の波が大きくなる"></textarea></label>
+
+  <div class="challenge"><b>チャレンジ：水平器</b>
+    <p>かたむけると LED の点が動く「水平器」を作ろう。</p>
+    <ol>
+      <li>平らに置くと、真ん中（x 2・y 2）の点が 1 つだけ光る</li>
+      <li>B ボタン側にかたむけると点が右へ、A ボタン側にかたむけると左へ動く</li>
+      <li>加速度 x（−1023〜1023）を、LED の列番号（0〜4）に変える。「計算」の棚の <b>マップ</b> ブロックを使う</li>
+      <li>前後のかたむき（y）でも、点が上下に動くようにできたら完成</li>
+    </ol>
+    <p style="font-size:14px;color:var(--text-sub)">ヒント：毎回「表示を消す」してから「点灯」しないと、点が線になってしまいます。</p>
+  </div>
+</section>
+
+<!-- STEP 4 -->
+<section class="step" data-title="ルールで見分けてみる" data-part="1限：初めまして micro:bit" data-start="10:20" data-end="10:30">
+  <div class="eyebrow">STEP 4 ・ 10:20〜10:30</div>
+  <h1>ルールで見分けてみる</h1>
+  <div class="goal"><b>ゴール</b>「歩く」と「走る」を if 文で見分けることに挑戦し、難しさを体験する</div>
+
+  <p>STEP 3 で見たグラフをヒントに、<b>走っているときは「R」、歩いているときは「W」</b>を表示するプログラムを作ってみよう。</p>
+  <figure class="blocks"><img src="img/blk-step4.png" alt="ずっと もし 加速度 絶対値 > 1500 なら 文字列を表示 R でなければ W"><figcaption>「加速度 絶対値」＝ x・y・z をまとめた揺れの強さ。止まっていると約 1000。1500 は仮の数字です</figcaption></figure>
+  <ol class="todo">
+    <li>1500 の所に入る数字を予想して入れる</li>
+    <li>本物に書き込んで、歩く・走るで試す</li>
+    <li>数字を変えて何回か試す</li>
+    <li><b>となりの人の micro:bit でも同じ数字でうまくいくか</b>試す</li>
+  </ol>
+  <details class="code"><summary>Python でコピーする</summary>
+    <div class="code-box"><button class="copy-btn">コピー</button>def on_forever():
+    if input.acceleration(Dimension.STRENGTH) &gt; 1500:
+        basic.show_string("R")
+    else:
+        basic.show_string("W")
+basic.forever(on_forever)</div>
+  </details>
+
+  <div class="think"><b>考えよう</b>
+    <ul class="tight">
+      <li>ぴったりの数字は見つかった？</li>
+      <li>人によって、持ち方によって、同じルールでうまくいく？</li>
+      <li>「スキップ」「ジャンプ」も見分けたくなったら、ルールはどうなる？</li>
+    </ul>
+  </div>
+  <label class="field">考えよう：考えたこと・気づいたこと<span>上の問いについて、自分の考えを書こう。この内容は提出します</span><textarea data-save="memo4"></textarea></label>
+
+  <div class="challenge"><b>チャレンジ：3 段階で見分ける</b>
+    <ol>
+      <li>止まる「S」・歩く「W」・走る「R」の 3 つを表示する</li>
+      <li>しきい値（境目の数字）は 2 つ。STEP 3 のグラフで<b>自分で測って</b>決める</li>
+      <li>「もし〜なら〜でなければもし〜でなければ」を使う</li>
+      <li>となりの人に使ってもらい、何回中何回当たったか数える</li>
+    </ol>
+  </div>
+  <div class="hint"><b>休憩のあと</b>　ルールを人間が書くかわりに、<b>データから機械に学ばせる</b>方法を試します。休憩中、micro:bit はつないだままで OK。</div>
+</section>
+
+<!-- STEP 5 -->
+<section class="step" data-title="機械学習ってなに？" data-part="2限：micro:bit AI" data-start="10:45" data-end="10:55">
+  <div class="eyebrow">STEP 5 ・ 10:45〜10:55</div>
+  <h1>機械学習ってなに？</h1>
+  <div class="goal"><b>ゴール</b>「ルールを書く」と「データから学ばせる」の違いを説明できる</div>
+
+  <div class="compare">
+    <div>
+      <h3>ルールで書く（STEP 4）</h3>
+      <p>人間が「絶対値 &gt; 1500 なら走る」と<b>決まりを考えて書く</b>。</p>
+      <p style="color:var(--text-sub);font-size:14px">決まりが複雑になると書けない。人によって合わない。</p>
+    </div>
+    <div>
+      <h3>機械学習（これから）</h3>
+      <p>人間は「これが歩く」「これが走る」という<b>見本（データ）を見せるだけ</b>。決まりはコンピュータが見つける。</p>
+      <p style="color:var(--text-sub);font-size:14px">見本の質と量で、かしこさが決まる。</p>
+    </div>
+  </div>
+
+  <h2>機械学習の 4 ステップ</h2>
+  <div class="flow">
+    <div><b>① データを集める</b>動きを何回も記録</div><span>→</span>
+    <div><b>② 学習する</b>コンピュータが特ちょうを探す</div><span>→</span>
+    <div><b>③ モデルができる</b>「見分けるしくみ」</div><span>→</span>
+    <div><b>④ 予測する</b>新しい動きを見分ける</div>
+  </div>
+  <p>今日使う <b>micro:bit CreateAI</b> は、この ①〜④ をブラウザだけで体験できるツールです。CreateAI の画面にも「接続 → データを集める → モデルをテスト → コードを書く → 使用」の順番が出てきます。</p>
+
+  <div class="think"><b>身のまわりの例</b>　スマホの顔認証、写真の自動分類、スマートウォッチの歩数計・睡眠判定……どれも「データから学んだモデル」が動いています。</div>
+
+  <div class="column">
+    <span class="tag">COLUMN</span>
+    <h3>micro:bit チャンピオンって知ってる？</h3>
+    <p>micro:bit を使った学びを広げる人たちが、毎年「micro:bit チャンピオン」に選ばれています。日本にもチャンピオンがいて、学校の授業や CoderDojo、イベントなどで micro:bit の楽しさを伝えています。</p>
+    <div class="people">
+      <div class="person"><b>やましゅう（山本 周）</b>2025 年からチャンピオン。インタビューでは「時間があれば機械学習の CreateAI も使いたい」と話していました。今日の授業はその実現です。<br><a href="https://note.com/microbitchampsjp/n/nc4288fc976b7" target="_blank" rel="noopener">インタビューを読む ↗</a></div>
+      <div class="person"><b>関口 悠 さん</b>先日、授業に来てくださったさくらインターネットの関口さんもチャンピオン。高校生と micro:bit × ChatGPT でゲームを作る授業もしています。<br><a href="https://note.com/microbitchampsjp/n/n297055c6fc3d" target="_blank" rel="noopener">インタビューを読む ↗</a></div>
+    </div>
+  </div>
+</section>
+
+<!-- STEP 6 -->
+<section class="step" data-title="CreateAI でモデルを作る" data-part="2限：micro:bit AI" data-start="10:55" data-end="11:25">
+  <div class="eyebrow">STEP 6 ・ 10:55〜11:25 ・ 2 人 1 組</div>
+  <h1>CreateAI でモデルを作る</h1>
+  <div class="goal"><b>ゴール</b>2〜3 種類の動きを見分ける AI モデルを作って、テストする</div>
+
+  <div class="hint"><b>ブラウザに注意</b>　CreateAI はブラウザから USB と Bluetooth で micro:bit とつながります。この機能（WebUSB・Web Bluetooth）がないブラウザでは使えません。
+    <ul class="tight">
+      <li><b>使えない</b>：Safari、Firefox</li>
+      <li><b>使える</b>：Chrome、Edge</li>
+      <li><b>たぶん使える</b>：Arc など Chrome と同じしくみのブラウザ。つながらなければ Chrome に切りかえよう（Brave は設定でオフになっていることが多い）</li>
+    </ul>
+  </div>
+  <a class="ext" href="https://createai.microbit.org/" target="_blank" rel="noopener">micro:bit CreateAI を開く ↗</a>
+
+  <h2>6-1 何を見分ける？ を決める</h2>
+  <p>2 人で相談して、<b>2〜3 種類の動き</b>を決めよう。迷ったら下の例から。</p>
+  <table class="mini">
+    <tr><th>テーマ</th><th>動き</th></tr>
+    <tr><td>歩く・走る</td><td>止まる ／ 歩く ／ 走る</td></tr>
+    <tr><td>手のジェスチャー</td><td>手をふる ／ 拍手 ／ 何もしない</td></tr>
+    <tr><td>スポーツ</td><td>素振り ／ ジャンプ ／ 立つ</td></tr>
+  </table>
+  <label class="field">見分ける動き<input type="text" data-save="actions" placeholder="例：止まる・歩く・走る"></label>
+
+  <h2>6-2 つなぐ</h2>
+  <ol class="todo">
+    <li>「新しいプロジェクト」→「プロジェクトを作成」</li>
+    <li>「CreateAI のやり方」が出たら「接続」を押す</li>
+    <li>必要なもの（micro:bit・パソコン・USB ケーブル・電池ボックス）を確認して「次」</li>
+    <li>USB でつないで「次」→ 出てきたポップアップで micro:bit を選んで「接続」<span class="sub">データ集め用のプログラムが micro:bit に書き込まれます</span></li>
+    <li>USB を外して<b>電池ボックスをつなぐ</b></li>
+    <li>micro:bit の LED に出た模様を、画面のマス目に入力してペアリングする</li>
+  </ol>
+  <div class="shots">
+    <figure><img class="zoom" src="img/cai-home.png" alt="CreateAI のホーム"><figcaption>① ホーム：「新しいプロジェクト」</figcaption></figure>
+    <figure><img class="zoom" src="img/cai-2.png" alt="CreateAI のやり方"><figcaption>② やり方の説明 →「接続」</figcaption></figure>
+    <figure><img class="zoom" src="img/cai-3.png" alt="必要なもの"><figcaption>③ 必要なもの →「次」</figcaption></figure>
+    <figure><img class="zoom" src="img/cai-4.png" alt="USB ケーブルをつなぐ"><figcaption>④ USB でつなぐ →「次」</figcaption></figure>
+    <figure><img class="zoom" src="img/cai-5.png" alt="ポップアップで micro:bit を選んで接続"><figcaption>⑤ ポップアップで micro:bit を選んで「接続」</figcaption></figure>
+  </div>
+
+  <h2>6-3 データを集める</h2>
+  <figure><img class="zoom" src="img/cai-workspace.png" alt="CreateAI のデータサンプル画面。アクション名の入力欄、アクションを追加、モデルのトレーニングのボタン"><figcaption>はじめの画面。左上に「アクション名」を入れる</figcaption></figure>
+  <ol class="todo">
+    <li>「アクション名」に 1 つ目の動きの名前を入れる（例：歩く）。左のマス目のアイコンも選べる</li>
+    <li>赤い<b>「記録」</b>ボタンを押して動く。<b>1 つの動きにつき 10 回以上</b>記録する<span class="sub">1 人が動く役、1 人が記録する役。micro:bit の B ボタンでも記録を始められます</span></li>
+    <li>「アクションを追加」で次の動きも同じように集める</li>
+    <li>変な記録（動きそこねた等）は、グラフの右上の × で消す</li>
+  </ol>
+  <figure><img class="zoom" src="img/cai-samples.png" alt="2 つのアクションにそれぞれ 3 個ずつデータが記録された画面"><figcaption>記録するたびに、x・y・z の 3 本のグラフが 1 つずつ増えます（これは公式サンプルの画面。動いている方は波が大きい）</figcaption></figure>
+  <div class="hint"><b>かしこい AI にするコツ</b>　同じ動きでも、少し速さ・大きさ・向きを変えて記録しよう。<b>いろいろな見本</b>があるほど、本番で迷わなくなります。「何もしない」も 1 つの動きとして入れると誤判定が減ります。</div>
+
+  <h2>6-4 トレーニング → テスト</h2>
+  <ol class="todo">
+    <li>右下の<b>「モデルのトレーニング」</b>→<b>「トレーニング開始」</b>を押す</li>
+    <li>「モデルのテスト」画面になったら、micro:bit を付けて動いてみる</li>
+    <li>動きごとの<b>確実性（％）</b>と、右下の<b>推定アクション</b>が合っているか確かめる<span class="sub">確実性が「認識ポイント」の線をこえると、その動きだと判定されます</span></li>
+    <li>まちがえる動きがあったら、左上の<b>「データサンプルを編集」</b>で戻ってデータを足し、<b>もう一度トレーニング</b>する</li>
+  </ol>
+  <div class="shots">
+    <figure><img class="zoom" src="img/cai-train.png" alt="モデルのトレーニングの説明とトレーニング開始ボタン"><figcaption>「トレーニング開始」を押す</figcaption></figure>
+    <figure><img class="zoom" src="img/cai-test.png" alt="モデルのテスト画面。確実性、認識ポイント、コードを書く、MakeCodeで編集"><figcaption>「モデルのテスト」画面。右下に「MakeCodeで編集」</figcaption></figure>
+  </div>
+  <label class="field">データを足して、どう変わった？<textarea data-save="memo6"></textarea></label>
+
+  <details class="trouble"><summary>つまずいたら：ペアリングがうまくいかない</summary>
+    <div>micro:bit の裏のリセットボタンを押してからやり直す。LED の模様は、光っている所を画面のマス目でクリック。何回か失敗したらスタッフを呼んでください。</div>
+  </details>
+  <details class="trouble"><summary>つまずいたら：Bluetooth の画面が出ない・micro:bit が一覧に出ない</summary>
+    <div>Mac の「システム設定」→「プライバシーとセキュリティ」→「Bluetooth」で、使っているブラウザがオンになっているか確認しよう。それでもダメなら Chrome で開き直してください。</div>
+  </details>
+  <details class="trouble"><summary>つまずいたら：途中で接続が切れた</summary>
+    <div>電池が弱っていないか確認。画面下の「接続」から再接続できます。</div>
+  </details>
+</section>
+
+<!-- STEP 7 -->
+<section class="step" data-title="他の人が使うと？" data-part="2限：micro:bit AI" data-start="11:25" data-end="11:35">
+  <div class="eyebrow">STEP 7 ・ 11:25〜11:35</div>
+  <h1>他の人が使うと？</h1>
+  <div class="goal"><b>ゴール</b>AI の得意・不得意が「データ」で決まることに気づく</div>
+
+  <ol class="todo">
+    <li>となりのペアと micro:bit を交換して、相手の AI を試す</li>
+    <li>うまく見分けられた動き・まちがえた動きを記録する</li>
+  </ol>
+  <label class="field">相手の AI を試した結果<textarea data-save="memo7" placeholder="例：走るは当たったけど、歩くが止まるにまちがえられた"></textarea></label>
+
+  <div class="think"><b>考えよう</b>
+    <ul class="tight">
+      <li>なぜ、作った本人だと当たって、他の人だとまちがえるの？</li>
+      <li>もし「大人の男性のデータ」だけで作った AI を、子どもやお年寄りが使ったら？</li>
+      <li>あなたの「歩き方」のデータは、あなたを見分ける手がかりになる？ ＝ 個人情報になる？</li>
+    </ul>
+  </div>
+  <label class="field">考えよう：考えたこと・気づいたこと<span>上の問いについて、自分の考えを書こう。この内容は提出します</span><textarea data-save="memo7b"></textarea></label>
+  <div class="hint">「歩き方や体の動きは個人情報になるか？」は、<b>11/16 の小テスト②「個人情報とセキュリティ」</b>にもつながります。</div>
+</section>
+
+<!-- STEP 8 -->
+<section class="step" data-title="AI をプログラムに組み込む" data-part="2限：micro:bit AI" data-start="11:35" data-end="11:55">
+  <div class="eyebrow">STEP 8 ・ 11:35〜11:55</div>
+  <h1>AI をプログラムに組み込む</h1>
+  <div class="goal"><b>ゴール</b>AI の判定に合わせて LED や音が動くプログラムを micro:bit に入れる</div>
+
+  <p>STEP 6 で作ったのは「動きを見分けるしくみ（モデル）」だけです。ここでは、<b>見分けたあとに何をするか</b>をプログラムで決めて、モデルと一緒に micro:bit に入れます。</p>
+
+  <h2>8-1 MakeCode を開く</h2>
+  <ol class="todo">
+    <li>「モデルのテスト」画面の右下<b>「MakeCodeで編集」</b>を押す</li>
+    <li>MakeCode が開いて説明が出たら<b>「閉じる」</b><span class="sub">左上の「&lt;」は CreateAI に戻るボタン。モデルを直したいときに使います</span></li>
+  </ol>
+  <figure><img class="zoom" src="img/mc-ml.png" alt="CreateAI から開いた MakeCode。棚に機械学習があり、ML の ○○ が開始したとき ブロックが並んでいる"><figcaption>棚のいちばん上に<b>「機械学習」</b>が増えています。右には、動きごとの<b>「ML の ○○ が開始したとき」</b>ブロックがもう入っています</figcaption></figure>
+
+  <h2>8-2 ブロックを読む</h2>
+  <table class="mini">
+    <tr><th>ブロック</th><th>いつ動く？</th></tr>
+    <tr><td>ML の ○○ が開始したとき</td><td>AI が「○○ の動きが始まった」と判定したとき</td></tr>
+    <tr><td>ML ○○ を duration (ms)停止</td><td>その動きが終わったとき。duration に続いた時間（ミリ秒）が入る</td></tr>
+  </table>
+  <p>最初は、CreateAI で選んだアイコンを表示するだけのプログラムになっています。</p>
+
+  <h2>8-3 シミュレーターで試す → 改造する</h2>
+  <ol class="todo">
+    <li>シミュレーターの下の<b>「MLイベント」</b>で動きを選ぶと、その動きが起きたことにして試せる</li>
+    <li>「ML の ○○ が開始したとき」の中身を変える<span class="sub">例：アイコンを変える ／「音楽」の棚で音を鳴らす</span></li>
+    <li>「機械学習」の棚を開いて、ほかにどんなブロックがあるか見てみる</li>
+  </ol>
+
+  <h2>8-4 micro:bit に入れて試す</h2>
+  <ol class="todo">
+    <li>USB でつないで<b>「ダウンロード」</b>→ 画面の指示どおりに進める<span class="sub">モデルとプログラムが一緒に micro:bit に入ります</span></li>
+    <li>USB を外して電池ボックスをつなぎ、体に付けて動いてみる</li>
+    <li>判定がイマイチなら、左上の「&lt;」で CreateAI に戻ってデータを足す → トレーニング → もう一度 MakeCode へ</li>
+  </ol>
+
+  <div class="challenge"><b>チャレンジ：自作の運動カウンター</b>
+    <p>次の条件を<b>全部</b>満たそう。</p>
+    <ol>
+      <li>変数 <code>回数</code> を作り、「最初だけ」で 0 にする</li>
+      <li>動き（例：走る・ジャンプ）を検知するたびに <code>回数</code> が 1 増える</li>
+      <li>ボタン A を押すと <code>回数</code> を表示する</li>
+      <li>ボタン A と B を同時に押すと <code>回数</code> が 0 に戻る</li>
+      <li><code>回数</code> が 10 の倍数になったら音が鳴る（「計算」の <b>あまり</b> を使う）</li>
+    </ol>
+    <p style="font-size:14px;color:var(--text-sub)">確認：実際に 10 回動いて、音が鳴るか・回数が合っているか確かめよう。</p>
+  </div>
+
+  <details class="trouble"><summary>つまずいたら：「MakeCodeで編集」ボタンがない</summary>
+    <div>先にモデルのトレーニング（STEP 6-4）が終わっている必要があります。「モデルのテスト」画面の右下にあります。</div>
+  </details>
+</section>
+
+<!-- STEP 9 -->
+<section class="step" data-title="誰の何を助ける？" data-part="2限：micro:bit AI" data-start="11:55" data-end="12:05">
+  <div class="eyebrow">STEP 9 ・ 11:55〜12:05</div>
+  <h1>誰の何を助ける？</h1>
+  <div class="goal"><b>ゴール</b>「動きを見分ける AI」で、誰かの困りごとを解決するアイデアを考える</div>
+
+  <p>12/7 からの<b>N1 に届くモノづくり</b>につながるアイデア出しです。思いつくだけ書いてみよう。</p>
+  <label class="field">誰の？<span>例：家族、地域のお年寄り、部活の仲間、神山の農家さん</span><input type="text" data-save="who"></label>
+  <label class="field">どんな困りごと？<textarea data-save="problem"></textarea></label>
+  <label class="field">どんな動きを見分ける？<textarea data-save="motion"></textarea></label>
+  <label class="field">見分けたら、何をする？<span>例：光る・音が鳴る・記録する・誰かに知らせる</span><textarea data-save="action"></textarea></label>
+  <label class="field">データを集めるときに気をつけること<span>STEP 7 を思い出そう：誰のデータ？ 個人情報は？</span><textarea data-save="care"></textarea></label>
+
+  <h2>振り返り</h2>
+  <label class="field">気づき・発見・疑問・要望<textarea data-save="reflect"></textarea></label>
+</section>
+
+<!-- STEP 10 -->
+<section class="step" data-title="提出・片付け" data-part="2限：micro:bit AI" data-start="12:05" data-end="12:15">
+  <div class="eyebrow">STEP 10 ・ 12:05〜12:15</div>
+  <h1>提出・片付け</h1>
+  <div class="goal"><b>ゴール</b>今日作ったプログラムとメモを Google フォームで提出する</div>
+
+  <h2>10-1 作ったプログラムのリンクを取る</h2>
+  <ol class="todo">
+    <li>STEP 8 の MakeCode（AI 入り）の画面で、<b>共有ボタン</b>（つながった 3 つの丸）を押す<span class="sub">CreateAI から開いた MakeCode に共有ボタンがないときは、左上の「&lt;」で戻り、CreateAI の「保存」でファイルを保存してスタッフに相談</span></li>
+    <li>プロジェクト名を確認して「プロジェクトを共有」を押す<span class="sub">リンクを知っている人は誰でも見られるようになります。<b>プロジェクト名に本名を入れない</b>でおこう</span></li>
+    <li>出てきたリンクをコピーして、下の欄に貼る</li>
+  </ol>
+  <figure><img class="zoom" src="img/mc-share.png" alt="MakeCode のプロジェクトを共有ダイアログ"><figcaption>「プロジェクトを共有」を押すとリンクができます</figcaption></figure>
+
+  <label class="field">AI 入りプログラムの共有リンク（STEP 8）<input type="text" data-save="linkAI" placeholder="https://makecode.microbit.org/_..."></label>
+  <label class="field">1限で作ったプログラムの共有リンク（任意）<input type="text" data-save="link1"></label>
+
+  <h2>10-2 フォームで提出</h2>
+  <ol class="todo">
+    <li>下のボタンを押す<span class="sub">このサイトで書いたメモとリンクが入った状態で、Google フォームが開きます</span></li>
+    <li>メールアドレスの欄にチェックを入れ、内容を確認して<b>「送信」</b>を押す<span class="sub">送信を押すまでは提出されていません！</span></li>
+  </ol>
+  <button class="btn primary" id="formBtn" style="font-size:17px;padding:14px 22px">提出フォームを開く ↗</button>
+  <p id="formNote" style="font-size:13px; color:var(--text-sub)"></p>
+
+  <details class="trouble"><summary>うまく開かないとき：メモを全部コピーして貼る</summary>
+    <div><p>メモがとても長いと、フォームに自動で入らないことがあります。そのときは下のボタンでコピーして、フォームに貼り付けてください。</p>
+    <button class="btn" id="copyAll">今日のメモを全部コピー</button></div>
+  </details>
+
+  <div class="hint"><b>片付け</b>　電池ボックス・USB ケーブル・micro:bit を元の箱に戻してください。</div>
+</section>
+
+  </main>
+</div>
+
+<div class="toast" id="toast">コピーしました</div>
+<div class="lightbox" id="lightbox"><img alt=""></div>
+
+<script>
+// 提出フォームの設定（createForm.gs の実行ログに出る1行で置きかえる）
+var FORM_CONFIG = {"url":"https://docs.google.com/forms/d/e/1FAIpQLSfz3xSgmQmiLZk5-T3nvWP3ExiZ-y1NCUJn_694BVXQKFC1_A/viewform","entries":{"step":"entry.1039845509","linkAI":"entry.1110790395","link1":"entry.1688006304","memo3":"entry.1195503139","memo4":"entry.481197170","actions":"entry.2079058691","memo6":"entry.1857855809","memo7":"entry.1269055604","memo7b":"entry.839017226","who":"entry.1939457398","problem":"entry.1735070635","motion":"entry.672869310","action":"entry.1358473759","care":"entry.315404699","reflect":"entry.1837581972"}};
+
+(function () {
+  var KEY = "mbai-1109";
+  var state = { done: {}, checks: {}, fields: {}, current: 0 };
+  try { var saved = JSON.parse(localStorage.getItem(KEY)); if (saved) state = Object.assign(state, saved); } catch (e) {}
+  function save() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }
+
+  var steps = Array.prototype.slice.call(document.querySelectorAll("section.step"));
+  var nav = document.getElementById("nav");
+
+  // サイドバー
+  var lastPart = "";
+  steps.forEach(function (s, i) {
+    if (s.dataset.part !== lastPart) {
+      var l = document.createElement("div");
+      l.className = "part-label"; l.textContent = s.dataset.part;
+      nav.appendChild(l); lastPart = s.dataset.part;
+    }
+    var b = document.createElement("button");
+    b.className = "step-link"; b.dataset.i = i;
+    b.innerHTML = '<span class="dot">' + i + '</span><span>' + s.dataset.title + '</span><span class="time">' + s.dataset.start + '</span>';
+    b.addEventListener("click", function () { show(i); });
+    nav.appendChild(b);
+
+    // フッター（できた！・次へ）
+    var foot = document.createElement("div");
+    foot.className = "step-foot";
+    foot.innerHTML =
+      '<button class="btn" data-act="prev"' + (i === 0 ? ' style="visibility:hidden"' : '') + '>← 前へ</button>' +
+      '<button class="btn" data-act="done">できた！</button>' +
+      '<button class="btn primary" data-act="next"' + (i === steps.length - 1 ? ' style="visibility:hidden"' : '') + '>次へ →</button>';
+    s.appendChild(foot);
+    foot.querySelector('[data-act="prev"]').onclick = function () { show(i - 1); };
+    foot.querySelector('[data-act="next"]').onclick = function () { show(i + 1); };
+    foot.querySelector('[data-act="done"]').onclick = function () {
+      state.done[i] = !state.done[i]; save(); render();
+      if (state.done[i] && i < steps.length - 1) show(i + 1);
+    };
+
+    // チェックリスト
+    var items = s.querySelectorAll("ol.todo > li");
+    Array.prototype.forEach.call(items, function (li, j) {
+      var id = i + "-" + j;
+      if (state.checks[id]) li.classList.add("checked");
+      li.addEventListener("click", function () {
+        state.checks[id] = !state.checks[id];
+        li.classList.toggle("checked", !!state.checks[id]); save();
+      });
+    });
+  });
+
+  // 入力欄の保存
+  document.querySelectorAll("[data-save]").forEach(function (el) {
+    var k = el.dataset.save;
+    if (state.fields[k]) el.value = state.fields[k];
+    el.addEventListener("input", function () { state.fields[k] = el.value; save(); });
+  });
+
+  function show(i) {
+    if (i < 0 || i >= steps.length) return;
+    state.current = i; save();
+    steps.forEach(function (s, j) { s.classList.toggle("show", j === i); });
+    render();
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function render() {
+    var n = 0;
+    nav.querySelectorAll(".step-link").forEach(function (b) {
+      var i = +b.dataset.i;
+      b.classList.toggle("active", i === state.current);
+      b.classList.toggle("done", !!state.done[i]);
+      b.querySelector(".dot").textContent = state.done[i] ? "✓" : i;
+      if (state.done[i]) n++;
+    });
+    steps.forEach(function (s, i) {
+      var d = s.querySelector('[data-act="done"]');
+      d.classList.toggle("done", !!state.done[i]);
+      d.textContent = state.done[i] ? "✓ できた" : "できた！";
+    });
+    document.getElementById("bar").style.width = (n / steps.length * 100) + "%";
+    document.getElementById("barLabel").textContent = n + " / " + steps.length + " STEP";
+  }
+
+  // 時刻の目安
+  function toMin(t) { var p = t.split(":"); return +p[0] * 60 + +p[1]; }
+  function pace() {
+    var d = new Date(), m = d.getHours() * 60 + d.getMinutes(), el = document.getElementById("pace");
+    var hit = -1;
+    steps.forEach(function (s, i) { if (m >= toMin(s.dataset.start) && m < toMin(s.dataset.end)) hit = i; });
+    if (m >= toMin("10:30") && m < toMin("10:45")) { el.textContent = "いまは休憩（10:45 から STEP 5）"; el.classList.add("show"); return; }
+    if (hit < 0) { el.classList.remove("show"); return; }
+    el.textContent = "いまの目安：STEP " + hit + "「" + steps[hit].dataset.title + "」";
+    el.classList.add("show");
+  }
+  pace(); setInterval(pace, 30000);
+
+  // 画像の拡大
+  var lb = document.getElementById("lightbox");
+  document.querySelectorAll("img.zoom").forEach(function (img) {
+    img.addEventListener("click", function () { lb.querySelector("img").src = img.src; lb.classList.add("show"); });
+  });
+  lb.addEventListener("click", function () { lb.classList.remove("show"); });
+
+  // コピー
+  var toast = document.getElementById("toast");
+  function copy(text) {
+    var done = function () { toast.classList.add("show"); setTimeout(function () { toast.classList.remove("show"); }, 1400); };
+    if (navigator.clipboard) navigator.clipboard.writeText(text).then(done, function () {});
+  }
+  document.querySelectorAll(".copy-btn").forEach(function (b) {
+    b.addEventListener("click", function () { copy(b.parentNode.textContent.replace(/^コピー/, "")); });
+  });
+  document.getElementById("copyAll").addEventListener("click", function () {
+    var labels = {
+      memo3: "STEP3 考えよう", memo4: "STEP4 考えよう",
+      actions: "STEP6 見分ける動き", memo6: "STEP6 データを足して変わったこと",
+      memo7: "STEP7 相手のAIを試した結果", memo7b: "STEP7 考えよう",
+      who: "STEP9 誰の？", problem: "STEP9 困りごと", motion: "STEP9 見分ける動き",
+      action: "STEP9 見分けたら何をする", care: "STEP9 データ集めで気をつけること", reflect: "振り返り"
+    };
+    copy(Object.keys(labels).map(function (k) { return "【" + labels[k] + "】\n" + (state.fields[k] || ""); }).join("\n\n"));
+  });
+
+  // 提出フォーム：サイトのメモを事前入力した URL で開く
+  var formBtn = document.getElementById("formBtn");
+  if (!FORM_CONFIG) {
+    formBtn.disabled = true; formBtn.style.opacity = ".5";
+    document.getElementById("formNote").textContent = "フォームのリンクは授業中に案内します。";
+  }
+  formBtn.addEventListener("click", function () {
+    if (!FORM_CONFIG) return;
+    var reached = 0;
+    Object.keys(state.done).forEach(function (k) { if (state.done[k] && +k > reached) reached = +k; });
+    var values = Object.assign({}, state.fields, { step: "STEP " + Math.max(reached, state.current || 0) });
+    var params = ["usp=pp_url"];
+    Object.keys(FORM_CONFIG.entries).forEach(function (key) {
+      var v = (values[key] || "").trim();
+      if (v) params.push(FORM_CONFIG.entries[key] + "=" + encodeURIComponent(v));
+    });
+    window.open(FORM_CONFIG.url + "?" + params.join("&"), "_blank", "noopener");
+  });
+
+  show(Math.min(state.current || 0, steps.length - 1));
+})();
+</script>
+</body>
+</html>
