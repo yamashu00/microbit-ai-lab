@@ -103,6 +103,14 @@ ul.tight { margin: 6px 0 0; padding-left: 20px; }
 @media (max-width: 600px) { .column .people { grid-template-columns: 1fr; } }
 .column .person { background: var(--surface-2); border-radius: var(--radius); padding: 12px 14px; font-size: 14px; }
 .column .person b { display: block; font-size: 15px; }
+.refs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 12px 0; }
+@media (max-width: 700px) { .refs { grid-template-columns: 1fr; } }
+.ref-card { display: block; text-decoration: none; color: var(--text); background: var(--surface-2); border-radius: var(--radius); overflow: hidden; font-size: 14px; }
+.ref-card:hover { outline: 2px solid var(--primary); }
+.ref-card img { display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: cover; background: #fff; }
+.ref-card div { padding: 10px 12px; }
+.ref-card b { display: block; font-size: 15px; }
+.ref-card small { color: var(--text-sub); }
 
 /* 手順リスト（チェックできる） */
 ol.todo { list-style: none; padding: 0; margin: 8px 0; counter-reset: todo; }
@@ -665,6 +673,27 @@ basic.forever(on_forever)</div>
   <div class="goal"><b>ゴール</b>「動きを見分ける AI」で、誰かの困りごとを解決するアイデアを考える</div>
 
   <p>12/7 からの<b>N1 に届くモノづくり</b>につながるアイデア出しです。思いつくだけ書いてみよう。</p>
+
+  <div class="column">
+    <span class="tag">参考資料</span>
+    <h3>micro:bit 公式の「作ってみよう」</h3>
+    <p>micro:bit 財団が、作り方つきの作品例をたくさん公開しています。今日と同じ <b>CreateAI で動きを見分ける</b>作品を 3 つ選びました。アイデアに迷ったらのぞいてみよう。</p>
+    <div class="refs">
+      <a class="ref-card" href="https://microbit.org/ja/projects/make-it-code-it/simple-ai-exercise-timer/" target="_blank" rel="noopener">
+        <img src="img/ref-ai-exercise-timer.jpg" alt="簡単なAI運動タイマーのサムネイル" loading="lazy">
+        <div><b>簡単なAI運動タイマー ↗</b>運動している時間だけを AI が見分けて計る<br><small>中級</small></div>
+      </a>
+      <a class="ref-card" href="https://microbit.org/ja/projects/make-it-code-it/ai-activity-timer/" target="_blank" rel="noopener">
+        <img src="img/ref-ai-activity-timer.jpg" alt="AI活動タイマーのサムネイル" loading="lazy">
+        <div><b>AI活動タイマー ↗</b>決めた活動を AI が検出して、時間を計る<br><small>中級</small></div>
+      </a>
+      <a class="ref-card" href="https://microbit.org/ja/projects/make-it-code-it/ai-sports-data-logger/" target="_blank" rel="noopener">
+        <img src="img/ref-ai-sports-logger.jpg" alt="AIスポーツデータ記録装置のサムネイル" loading="lazy">
+        <div><b>AIスポーツデータ記録装置 ↗</b>走った・歩いた・止まっていた時間を記録する<br><small>上級</small></div>
+      </a>
+    </div>
+    <a class="ext" href="https://microbit.org/ja/projects/make-it-code-it/" target="_blank" rel="noopener">ほかの作品も見る（micro:bit 公式）↗</a>
+  </div>
   <label class="field">誰の？<span>例：家族、地域のお年寄り、部活の仲間、神山の農家さん</span><input type="text" data-save="who"></label>
   <label class="field">どんな困りごと？<textarea data-save="problem"></textarea></label>
   <label class="field">どんな動きを見分ける？<textarea data-save="motion"></textarea></label>
